@@ -1,0 +1,12 @@
+*.png
+*.jpg
+*.jpeg
+*.h5
+/BBoxData
+/doc
+/js
+/samples
+/serve
+/site
+/test
+
