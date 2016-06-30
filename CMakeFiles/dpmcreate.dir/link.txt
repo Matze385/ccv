@@ -1,0 +1,1 @@
+/usr/bin/cc      CMakeFiles/dpmcreate.dir/bin/dpmcreate.c.o  -o dpmcreate -rdynamic libCCV.a /home/mbrosowsky/miniconda2/envs/dpm/lib/libvigraimpex.so.11 -Wl,-Bstatic -llinear -lgsl -Wl,-Bdynamic -Wl,-rpath,/home/mbrosowsky/miniconda2/envs/dpm/lib 

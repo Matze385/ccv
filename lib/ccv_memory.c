@@ -41,7 +41,7 @@ ccv_dense_matrix_t* ccv_dense_matrix_new(int rows, int cols, int type, void* dat
 	{
 		mat = (ccv_dense_matrix_t*)ccmalloc(sizeof(ccv_dense_matrix_t));
 		mat->type = (CCV_GET_CHANNEL(type) | CCV_GET_DATA_TYPE(type) | CCV_MATRIX_DENSE | CCV_NO_DATA_ALLOC) & ~CCV_GARBAGE;
-		mat->data.u8 = data;
+		mat->data.u8 = (unsigned char *)data;
 	} else {
 		mat = (ccv_dense_matrix_t*)(data ? data : ccmalloc(ccv_compute_dense_matrix_size(rows, cols, type)));
 		mat->type = (CCV_GET_CHANNEL(type) | CCV_GET_DATA_TYPE(type) | CCV_MATRIX_DENSE) & ~CCV_GARBAGE;
@@ -253,7 +253,7 @@ void ccv_make_array_immutable(ccv_array_t* array)
 	assert(array->sig == 0);
 	array->type &= ~CCV_REUSABLE;
 	/* TODO: trim the array */
-	array->sig = ccv_cache_generate_signature(array->data, array->size * array->rsize, (uint64_t)array->rsize, CCV_EOF_SIGN);
+	array->sig = ccv_cache_generate_signature((const char *)array->data, array->size * array->rsize, (uint64_t)array->rsize, CCV_EOF_SIGN);
 }
 
 void ccv_array_free_immediately(ccv_array_t* array)

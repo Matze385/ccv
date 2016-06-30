@@ -1,0 +1,68 @@
+cmake_minimum_required (VERSION 2.6)
+project (DPM)
+
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
+
+#find dependencies
+find_package(VIGRA)
+include_directories(${VIGRA_INCLUDE_DIR})
+set(LIBLINEAR_LIB /usr/lib/liblinear.a)
+set(LIBLINEAR_INC "")
+set(GSLLIB_LIB /usr/lib/libgsl.a)
+
+add_library(CCV lib/ccv_algebra.c
+lib/io/_ccv_io_binary.c
+lib/io/_ccv_io_bmp.c
+lib/io/_ccv_io_raw.c
+lib/io/_ccv_io_libpng.c
+lib/io/_ccv_io_libjpeg.c
+lib/ccv_image_processing.c
+lib/configure.ac
+lib/ccv_sparse_coding.c
+lib/ccv_classic.c
+lib/ccv_resample.c
+lib/ccv_sift.c
+lib/ccv_mser.c
+lib/ccv_memory.c
+lib/3rdparty/sfmt/SFMT.c
+lib/3rdparty/dsfmt/dSFMT.c
+lib/3rdparty/sha1/sha1.c
+lib/3rdparty/kissfft/kissf_fftr.c
+lib/3rdparty/kissfft/kiss_fftnd.c
+lib/3rdparty/kissfft/kiss_fftr.c
+lib/3rdparty/kissfft/kiss_fft.c
+lib/3rdparty/kissfft/kissf_fftnd.c
+lib/3rdparty/kissfft/kissf_fftndr.c
+lib/3rdparty/kissfft/kiss_fftndr.c
+lib/3rdparty/kissfft/kissf_fft.c
+lib/3rdparty/sqlite3/sqlite3.c
+lib/ccv_daisy.c
+lib/ccv_util.c
+lib/ccv_basic.c
+lib/ccv_dpm.c
+lib/ccv_scd.c
+lib/ccv_bbf.c
+lib/ccv_ferns.c
+lib/ccv_io.c
+lib/ccv_output.c
+lib/ccv_numeric.c
+lib/ccv_swt.c
+lib/ccv_transform.c
+lib/ccv_cache.c
+lib/ccv_convnet.c
+lib/ccv_tld.c
+lib/ccv_icf.c
+)
+
+
+#target_include_directories(CCV PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/lib/inl PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/lib/3rdparty PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/lib/io PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/lib/cuda)
+
+target_link_libraries(CCV ${VIGRA_LIBRARIES} ${LIBLINEAR_LIB} ${GSLLIB_LIB})
+#add executable
+add_executable(dpmcreate bin/dpmcreate.c)
+#include directory with ccv.h
+#target_include_directories(dpmcreate ${CMAKE_CURRENT_SOURCE_DIR}/lib)
+target_link_libraries(dpmcreate CCV ${VIGRA_LIBRARIES})
+
+add_executable(dpmdetect bin/dpmdetect.c)
+target_link_libraries(dpmdetect CCV ${VIGRA_LIBRARIES})

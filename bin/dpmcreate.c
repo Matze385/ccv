@@ -1,6 +1,7 @@
 #include "ccv.h"
 #include <ctype.h>
 #include <getopt.h>
+#include <vigra/multi_array.hxx>
 
 static void exit_with_help(void)
 {
@@ -36,6 +37,7 @@ static void exit_with_help(void)
 
 int main(int argc, char** argv)
 {
+        vigra::MultiArray<2, UInt8> array (shape2(10, 10));
 	static struct option dpm_options[] = {
 		/* help */
 		{"help", 0, 0, 0},
