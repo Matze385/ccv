@@ -15,7 +15,7 @@
 #endif
 
 //Turn assertion on and off by preprocessor
-#define ASSERTION_ON (1) //if 1 assertions are turned on, turned off (0) for allowing small trainingssize
+#define ASSERTION_ON (0) //if 1 assertions are turned on, turned off (0) for allowing small trainingssize
 #if ASSERTION_ON==1
 #define ASSERT(X) assert(X)
 #else 
@@ -1753,7 +1753,7 @@ void ccv_dpm_mixture_model_new(char** posfiles, ccv_rect_t* bboxes, int posnum, 
         //PRINT(CCV_CLI_INFO, "2+7 =%d", add(2,7));
         //ccv_dense_matrix_t* read_in_img = 0;
         //ccv_read(posfiles[0], &read_in_img);
-        
+        ASSERT(2>8);
 	int t, d, c, i, j, k, p;
 	_ccv_dpm_check_params(params);
 	ASSERT(params.negative_cache_size <= negnum && params.negative_cache_size > REGQ && params.negative_cache_size > MINI_BATCH);
