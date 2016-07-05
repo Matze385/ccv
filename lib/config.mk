@@ -1,4 +1,5 @@
 CC := clang
+CXX := clang++
 AR := ar
 NVCC := /usr/local/cuda-7.5/bin/nvcc
 CUDA_OBJS := cuda/cwc_convnet.o cuda/cwc_convnet_helper.o cuda/convnet/cwc_convnet_convolutional.o cuda/convnet/cwc_convnet_rnorm.o cuda/convnet/cwc_convnet_pool.o cuda/convnet/cwc_convnet_full_connect.o
@@ -7,4 +8,4 @@ prefix := /usr/local
 exec_prefix := ${prefix}
 CFLAGS := -msse2 $(DEFINE_MACROS) -I${prefix}/include
 NVFLAGS := --use_fast_math -arch=sm_30 $(DEFINE_MACROS)
-LDFLAGS := -L${exec_prefix}/lib -lm -lcblas -latlas -lpng -ljpeg -lfftw3 -lfftw3f -lpthread -llinear -lavcodec -lavformat -lswscale -lgsl -lgslcblas -lcuda -lcudart -lcublas -L/usr/local/cuda/lib64
+LDFLAGS := -L${exec_prefix}/lib -lm -lcblas -latlas -lpng -ljpeg -lfftw3 -lfftw3f -lpthread -llinear -lavcodec -lavformat -lswscale -lgsl -lgslcblas -lcuda -lcudart -lcublas -L/usr/local/cuda/lib64 

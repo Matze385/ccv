@@ -1,4 +1,5 @@
 #include "ccv.h"
+#include "modifications.h"
 #include "ccv_internal.h"
 #include <sys/time.h>
 #ifdef HAVE_GSL
@@ -13,14 +14,23 @@
 #include <linear.h>
 #endif
 
+//Turn assertion on and off by preprocessor
+#define ASSERTION_ON (1) //if 1 assertions are turned on, turned off (0) for allowing small trainingssize
+#if ASSERTION_ON==1
+#define ASSERT(X) assert(X)
+#else 
+#define ASSERT(X) //no code is inserted when assertions are turned off
+#endif
+
+#define CCV_DPM_WINDOW_SIZE (2)
+#define CCV_NUMBER_FEATURES (4) //head, upper body, lower body, wings
+
 const ccv_dpm_param_t ccv_dpm_default_params = {
 	.interval = 8,
 	.min_neighbors = 1,
 	.flags = 0,
 	.threshold = 0.6, // 0.8
 };
-
-#define CCV_DPM_WINDOW_SIZE (8)
 
 static int _ccv_dpm_scale_upto(ccv_dense_matrix_t* a, ccv_dpm_mixture_model_t** _model, int count, int interval)
 /*
@@ -260,7 +270,7 @@ static void _ccv_dpm_read_checkpoint(ccv_dpm_mixture_model_t* model, const char*
 	int count;
 	char flag;
 	fscanf(r, "%c", &flag);
-	assert(flag == ',');
+	ASSERT(flag == ',');
 	fscanf(r, "%d %d", &model->count, &count);
 	ccv_dpm_root_classifier_t* root_classifier = (ccv_dpm_root_classifier_t*)ccmalloc(sizeof(ccv_dpm_root_classifier_t) * count);
 	memset(root_classifier, 0, sizeof(ccv_dpm_root_classifier_t) * count);
@@ -326,7 +336,7 @@ static const int _ccv_dpm_sym_lut[] = { 2, 3, 0, 1,
 
 static void _ccv_dpm_check_root_classifier_symmetry(ccv_dense_matrix_t* w)
 {
-	assert(CCV_GET_CHANNEL(w->type) == 31 && CCV_GET_DATA_TYPE(w->type) == CCV_32F);
+	ASSERT(CCV_GET_CHANNEL(w->type) == 31 && CCV_GET_DATA_TYPE(w->type) == CCV_32F);
 	float *w_ptr = w->data.f32;
 	int i, j, k;
 	for (i = 0; i < w->rows; i++)
@@ -387,7 +397,7 @@ static void _ccv_dpm_collect_examples_randomly(gsl_rng* rng, ccv_array_t** negex
 			{
 				ccv_dense_matrix_t* image = 0;
 				ccv_read(bgfiles[i], &image, (grayscale ? CCV_IO_GRAY : 0) | CCV_IO_ANY_FILE);
-				assert(image != 0);
+				ASSERT(image != 0);
 				if (image->rows - mrows * CCV_DPM_WINDOW_SIZE < 0 ||
 					image->cols - mcols * CCV_DPM_WINDOW_SIZE < 0)
 				{
@@ -400,7 +410,7 @@ static void _ccv_dpm_collect_examples_randomly(gsl_rng* rng, ccv_array_t** negex
 				{
 					ccv_dense_matrix_t* slice = 0;
 					ccv_slice(image, (ccv_matrix_t**)&slice, 0, y + ((mrows - rows[j]) * CCV_DPM_WINDOW_SIZE + 1) / 2, x + ((mcols - cols[j]) * CCV_DPM_WINDOW_SIZE + 1) / 2, rows[j] * CCV_DPM_WINDOW_SIZE, cols[j] * CCV_DPM_WINDOW_SIZE);
-					assert(y + ((mrows - rows[j]) * CCV_DPM_WINDOW_SIZE + 1) / 2 >= 0 &&
+					ASSERT(y + ((mrows - rows[j]) * CCV_DPM_WINDOW_SIZE + 1) / 2 >= 0 &&
 						   y + ((mrows - rows[j]) * CCV_DPM_WINDOW_SIZE + 1) / 2 + rows[j] * CCV_DPM_WINDOW_SIZE <= image->rows &&
 						   x + ((mcols - cols[j]) * CCV_DPM_WINDOW_SIZE + 1) / 2 >= 0 &&
 						   x + ((mcols - cols[j]) * CCV_DPM_WINDOW_SIZE + 1) / 2 + cols[j] * CCV_DPM_WINDOW_SIZE <= image->cols);
@@ -413,7 +423,7 @@ static void _ccv_dpm_collect_examples_randomly(gsl_rng* rng, ccv_array_t** negex
 						.part = 0,
 					};
 					ccv_make_matrix_mutable(hog);
-					assert(hog->rows == rows[j] && hog->cols == cols[j] && CCV_GET_CHANNEL(hog->type) == 31 && CCV_GET_DATA_TYPE(hog->type) == CCV_32F);
+					ASSERT(hog->rows == rows[j] && hog->cols == cols[j] && CCV_GET_CHANNEL(hog->type) == 31 && CCV_GET_DATA_TYPE(hog->type) == CCV_32F);
 					vector.root.w = hog;
 					ccv_array_push(negex[j], &vector);
 				}
@@ -464,7 +474,7 @@ static ccv_array_t* _ccv_dpm_summon_examples_by_rectangle(char** posfiles, ccv_r
 		}
 		ccv_dense_matrix_t* image = 0;
 		ccv_read(posfiles[i], &image, (grayscale ? CCV_IO_GRAY : 0) | CCV_IO_ANY_FILE);
-		assert(image != 0);
+		ASSERT(image != 0);
 		ccv_dense_matrix_t* up2x = 0;
 		ccv_sample_up(image, &up2x, 0, 0, 0);
 		ccv_matrix_free(image);
@@ -479,7 +489,7 @@ static ccv_array_t* _ccv_dpm_summon_examples_by_rectangle(char** posfiles, ccv_r
 		ccv_hog(resize, &hog, 0, 9, CCV_DPM_WINDOW_SIZE);
 		ccv_matrix_free(resize);
 		ccv_make_matrix_mutable(hog);
-		assert(hog->rows == rows && hog->cols == cols && CCV_GET_CHANNEL(hog->type) == 31 && CCV_GET_DATA_TYPE(hog->type) == CCV_32F);
+		ASSERT(hog->rows == rows && hog->cols == cols && CCV_GET_CHANNEL(hog->type) == 31 && CCV_GET_DATA_TYPE(hog->type) == CCV_32F);
 		vector.root.w = hog;
 		ccv_array_push(posv, &vector);
 		FLUSH(CCV_CLI_INFO, " - generating positive examples for model %d : %d / %d", id, i + 1, posnum);
@@ -662,7 +672,7 @@ static void _ccv_dpm_initialize_root_classifier(gsl_rng* rng, ccv_dpm_root_class
 	}
         //train linear support vector machine out of liblinear
 	struct model* linear = train(&prob, &linear_parameters);
-	assert(linear != 0);
+	ASSERT(linear != 0);
 	PRINT(CCV_CLI_INFO, " - model->label[0]: %d, model->nr_class: %d, model->nr_feature: %d\n", linear->label[0], linear->nr_class, linear->nr_feature);
 	if (symmetric)
 	{
@@ -854,12 +864,12 @@ static double _ccv_dpm_vector_score(ccv_dpm_mixture_model_t* model, ccv_dpm_feat
 	ccv_dpm_root_classifier_t* root_classifier = model->root + v->id;
 	double score = root_classifier->beta;
 	int i, k, ch = CCV_GET_CHANNEL(v->root.w->type);
-	assert(ch == 31);
+	ASSERT(ch == 31);
 	float *vptr = v->root.w->data.f32;
 	float *wptr = root_classifier->root.w->data.f32;
 	for (i = 0; i < v->root.w->rows * v->root.w->cols * ch; i++)
 		score += wptr[i] * vptr[i];
-	assert(v->count == root_classifier->count || (v->count == 0 && v->part == 0));
+	ASSERT(v->count == root_classifier->count || (v->count == 0 && v->part == 0));
 	for (k = 0; k < v->count; k++)
 	{
 		ccv_dpm_part_classifier_t* part_classifier = root_classifier->part + k;
@@ -917,13 +927,13 @@ static void _ccv_dpm_collect_feature_vector(ccv_dpm_feature_vector_t* v, float s
 		part->dyy = ry * ry;
 		// deal with out-of-bound error
 		int start_y = ccv_max(0, iy - ry - pwh);
-		assert(start_y < detail->rows);
+		ASSERT(start_y < detail->rows);
 		int start_x = ccv_max(0, ix - rx - pww);
-		assert(start_x < detail->cols);
+		ASSERT(start_x < detail->cols);
 		int end_y = ccv_min(detail->rows, iy - ry - pwh + part->w->rows);
-		assert(end_y >= 0);
+		ASSERT(end_y >= 0);
 		int end_x = ccv_min(detail->cols, ix - rx - pww + part->w->cols);
-		assert(end_x >= 0);
+		ASSERT(end_x >= 0);
 		h_ptr = (float*)ccv_get_dense_matrix_cell_by(CCV_32F | ch, detail, start_y, start_x, 0);
 		ccv_zero(v->part[i].w);
 		w_ptr = (float*)ccv_get_dense_matrix_cell_by(CCV_32F | ch, part->w, start_y - (iy - ry - pwh), start_x - (ix - rx - pww), 0);
@@ -1277,8 +1287,8 @@ static void _ccv_dpm_stochastic_gradient_descent(ccv_dpm_mixture_model_t* model,
 		return;
 	ccv_dpm_root_classifier_t* root_classifier = model->root + v->id;
 	int i, j, k, c, ch = CCV_GET_CHANNEL(v->root.w->type);
-	assert(ch == 31);
-	assert(v->root.w->rows == root_classifier->root.w->rows && v->root.w->cols == root_classifier->root.w->cols);
+	ASSERT(ch == 31);
+	ASSERT(v->root.w->rows == root_classifier->root.w->rows && v->root.w->cols == root_classifier->root.w->cols);
 	float *vptr = v->root.w->data.f32;
 	ccv_make_matrix_mutable(root_classifier->root.w);
 	float *wptr = root_classifier->root.w->data.f32;
@@ -1302,13 +1312,13 @@ static void _ccv_dpm_stochastic_gradient_descent(ccv_dpm_mixture_model_t* model,
 		root_classifier->beta += alpha * y * Cn;
 	}
 	ccv_make_matrix_immutable(root_classifier->root.w);
-	assert(v->count == root_classifier->count);
+	ASSERT(v->count == root_classifier->count);
 	for (k = 0; k < v->count; k++)
 	{
 		ccv_dpm_part_classifier_t* part_classifier = root_classifier->part + k;
 		ccv_make_matrix_mutable(part_classifier->w);
 		ccv_dpm_part_classifier_t* part_vector = v->part + k;
-		assert(part_vector->w->rows == part_classifier->w->rows && part_vector->w->cols == part_classifier->w->cols);
+		ASSERT(part_vector->w->rows == part_classifier->w->rows && part_vector->w->cols == part_classifier->w->cols);
 		part_classifier->dx -= alpha * y * Cn * part_vector->dx;
 		part_classifier->dxx -= alpha * y * Cn * part_vector->dxx;
 		part_classifier->dxx = ccv_max(part_classifier->dxx, 0.01);
@@ -1341,7 +1351,7 @@ static void _ccv_dpm_stochastic_gradient_descent(ccv_dpm_mixture_model_t* model,
 				}
 			} else {
 				ccv_dpm_part_classifier_t* other_part_classifier = root_classifier->part + part_classifier->counterpart;
-				assert(part_vector->w->rows == other_part_classifier->w->rows && part_vector->w->cols == other_part_classifier->w->cols);
+				ASSERT(part_vector->w->rows == other_part_classifier->w->rows && part_vector->w->cols == other_part_classifier->w->cols);
 				other_part_classifier->dx += /* flip the sign on x-axis (symmetric) */ alpha * y * Cn * part_vector->dx;
 				other_part_classifier->dxx -= alpha * y * Cn * part_vector->dxx;
 				other_part_classifier->dxx = ccv_max(other_part_classifier->dxx, 0.01);
@@ -1473,7 +1483,7 @@ static int _ccv_dpm_read_positive_feature_vectors(ccv_dpm_feature_vector_t** vs,
 		return -1;
 	int n;
 	fscanf(r, "%d", &n);
-	assert(n == _n);
+	ASSERT(n == _n);
 	int i;
 	for (i = 0; i < n; i++)
 		vs[i] = _ccv_dpm_read_feature_vector(r);
@@ -1503,13 +1513,13 @@ static int _ccv_dpm_read_negative_feature_vectors(ccv_array_t** _negv, int _nega
 		return -1;
 	int negative_cache_size, negnum;
 	fscanf(r, "%d %d", &negative_cache_size, &negnum);
-	assert(negative_cache_size == _negative_cache_size);
+	ASSERT(negative_cache_size == _negative_cache_size);
 	ccv_array_t* negv = *_negv = ccv_array_new(sizeof(ccv_dpm_feature_vector_t*), negnum, 0);
 	int i;
 	for (i = 0; i < negnum; i++)
 	{
 		ccv_dpm_feature_vector_t* v = _ccv_dpm_read_feature_vector(r);
-		assert(v);
+		ASSERT(v);
 		ccv_array_push(negv, &v);
 	}
 	fclose(r);
@@ -1537,23 +1547,23 @@ static void _ccv_dpm_adjust_model_constant(ccv_dpm_mixture_model_t* model, int k
 
 static void _ccv_dpm_check_params(ccv_dpm_new_param_t params)
 {
-	assert(params.components > 0);
-	assert(params.parts > 0);
-	assert(params.grayscale == 0 || params.grayscale == 1);
-	assert(params.symmetric == 0 || params.symmetric == 1);
-	assert(params.min_area > 100);
-	assert(params.max_area > params.min_area);
-	assert(params.iterations >= 0);
-	assert(params.data_minings >= 0);
-	assert(params.relabels >= 0);
-	assert(params.negative_cache_size > 0);
-	assert(params.include_overlap > 0.1);
-	assert(params.alpha > 0 && params.alpha < 1);
-	assert(params.alpha_ratio > 0 && params.alpha_ratio < 1);
-	assert(params.C > 0);
-	assert(params.balance > 0);
-	assert(params.percentile_breakdown > 0 && params.percentile_breakdown <= 1);
-	assert(params.detector.interval > 0);
+	ASSERT(params.components > 0);
+	ASSERT(params.parts > 0);
+	ASSERT(params.grayscale == 0 || params.grayscale == 1);
+	ASSERT(params.symmetric == 0 || params.symmetric == 1);
+	ASSERT(params.min_area > 100);
+	ASSERT(params.max_area > params.min_area);
+	ASSERT(params.iterations >= 0);
+	ASSERT(params.data_minings >= 0);
+	ASSERT(params.relabels >= 0);
+	ASSERT(params.negative_cache_size > 0);
+	ASSERT(params.include_overlap > 0.1);
+	ASSERT(params.alpha > 0 && params.alpha < 1);
+	ASSERT(params.alpha_ratio > 0 && params.alpha_ratio < 1);
+	ASSERT(params.C > 0);
+	ASSERT(params.balance > 0);
+	ASSERT(params.percentile_breakdown > 0 && params.percentile_breakdown <= 1);
+	ASSERT(params.detector.interval > 0);
 }
 
 #define MINI_BATCH (10)
@@ -1568,7 +1578,7 @@ static ccv_dpm_mixture_model_t* _ccv_dpm_optimize_root_mixture_model(gsl_rng* rn
 {
 	int i, j, k, t, c;
 	for (i = 0; i < model->count - 1; i++)
-		assert(posex[i]->rnum == posex[i + 1]->rnum && negex[i]->rnum == negex[i + 1]->rnum);
+		ASSERT(posex[i]->rnum == posex[i + 1]->rnum && negex[i]->rnum == negex[i + 1]->rnum);
 	int posnum = posex[0]->rnum;
 	int negnum = negex[0]->rnum;
         //label saves model with higest score 
@@ -1637,21 +1647,21 @@ static ccv_dpm_mixture_model_t* _ccv_dpm_optimize_root_mixture_model(gsl_rng* rn
 					k = order[i];
 					if (label[k]  == j)
 					{
-						assert(label[k] < model->count);
+						ASSERT(label[k] < model->count);
 						if (k < posnum)
 						{
 							ccv_dpm_feature_vector_t* v = (ccv_dpm_feature_vector_t*)ccv_array_get(posex[label[k]], k);
-							assert(v->root.w);
+							ASSERT(v->root.w);
 							double score = _ccv_dpm_vector_score(model, v); // the loss for mini-batch method (computed on model)
-							assert(!isnan(score));
-							assert(v->id == j);
+							ASSERT(!isnan(score));
+							ASSERT(v->id == j);
 							if (score <= 1)
 								_ccv_dpm_stochastic_gradient_descent(_model, v, 1, alpha * pos_weight, regz_rate, symmetric);
 						} else {
 							ccv_dpm_feature_vector_t* v = (ccv_dpm_feature_vector_t*)ccv_array_get(negex[label[k]], k - posnum);
 							double score = _ccv_dpm_vector_score(model, v);
-							assert(!isnan(score));
-							assert(v->id == j);
+							ASSERT(!isnan(score));
+							ASSERT(v->id == j);
 							if (score >= -1)
 								_ccv_dpm_stochastic_gradient_descent(_model, v, -1, alpha * neg_weight, regz_rate, symmetric);
 						}
@@ -1680,12 +1690,12 @@ static ccv_dpm_mixture_model_t* _ccv_dpm_optimize_root_mixture_model(gsl_rng* rn
 			{
 				if (label[i] < 0)
 					continue;
-				assert(label[i] < model->count);
+				ASSERT(label[i] < model->count);
 				ccv_dpm_feature_vector_t* v = (ccv_dpm_feature_vector_t*)ccv_array_get(posex[label[i]], i);
 				if (v->root.w)
 				{
 					double score = _ccv_dpm_vector_score(model, v);
-					assert(!isnan(score));
+					ASSERT(!isnan(score));
 					double hinge_loss = ccv_max(0, 1.0 - score);
 					positive_loss += hinge_loss;
 					double pos_weight = sqrt((double)neg_prog[v->id] / pos_prog[v->id] * balance); // positive weight
@@ -1697,10 +1707,10 @@ static ccv_dpm_mixture_model_t* _ccv_dpm_optimize_root_mixture_model(gsl_rng* rn
 			{
 				if (label[i + posnum] < 0)
 					continue;
-				assert(label[i + posnum] < model->count);
+				ASSERT(label[i + posnum] < model->count);
 				ccv_dpm_feature_vector_t* v = (ccv_dpm_feature_vector_t*)ccv_array_get(negex[label[i + posnum]], i);
 				double score = _ccv_dpm_vector_score(model, v);
-				assert(!isnan(score));
+				ASSERT(!isnan(score));
 				double hinge_loss = ccv_max(0, 1.0 + score);
 				negative_loss += hinge_loss;
 				double neg_weight = sqrt((double)pos_prog[v->id] / neg_prog[v->id] / balance); // negative weight
@@ -1736,12 +1746,17 @@ static ccv_dpm_mixture_model_t* _ccv_dpm_optimize_root_mixture_model(gsl_rng* rn
 
 /*
 main function which is called for training
+negnum: number of negative examples to initialize root filter with SVM
 */
 void ccv_dpm_mixture_model_new(char** posfiles, ccv_rect_t* bboxes, int posnum, char** bgfiles, int bgnum, int negnum, const char* dir, ccv_dpm_new_param_t params)
-{
+{       
+        //PRINT(CCV_CLI_INFO, "2+7 =%d", add(2,7));
+        //ccv_dense_matrix_t* read_in_img = 0;
+        //ccv_read(posfiles[0], &read_in_img);
+        
 	int t, d, c, i, j, k, p;
 	_ccv_dpm_check_params(params);
-	assert(params.negative_cache_size <= negnum && params.negative_cache_size > REGQ && params.negative_cache_size > MINI_BATCH);
+	ASSERT(params.negative_cache_size <= negnum && params.negative_cache_size > REGQ && params.negative_cache_size > MINI_BATCH);
 	PRINT(CCV_CLI_INFO, "with %d positive examples and %d negative examples\n"
 		   "negative examples are are going to be collected from %d background images\n",
 		   posnum, negnum, bgnum);
@@ -1766,7 +1781,7 @@ void ccv_dpm_mixture_model_new(char** posfiles, ccv_rect_t* bboxes, int posnum, 
         //save aspect ratio of positive examples
 	for (i = 0; i < posnum; i++)
 	{
-		assert(bboxes[i].width > 0 && bboxes[i].height > 0);
+		ASSERT(bboxes[i].width > 0 && bboxes[i].height > 0);
 		fn[i].value = (float)bboxes[i].width / (float)bboxes[i].height;
 		fn[i].index = i;
 	}
@@ -1962,7 +1977,7 @@ void ccv_dpm_mixture_model_new(char** posfiles, ccv_rect_t* bboxes, int posnum, 
 		for (i = 0; i < posnum; i++)
 			if (posv[i])
 			{
-				assert(posv[i]->id >= 0 && posv[i]->id < model->count);
+				ASSERT(posv[i]->id >= 0 && posv[i]->id < model->count);
 				++posvnum[posv[i]->id];
 			}
 		PRINT(CCV_CLI_INFO, " - positive examples divided by components : %d", posvnum[0]);
@@ -1983,7 +1998,7 @@ void ccv_dpm_mixture_model_new(char** posfiles, ccv_rect_t* bboxes, int posnum, 
 				{
 					ccv_dpm_feature_vector_t* v = *(ccv_dpm_feature_vector_t**)ccv_array_get(negv, j);
 					double score = _ccv_dpm_vector_score(model, v);
-					assert(!isnan(score));
+					ASSERT(!isnan(score));
 					if (score >= -1)
 						ccv_array_push(av, &v);
 					else
@@ -2005,7 +2020,7 @@ void ccv_dpm_mixture_model_new(char** posfiles, ccv_rect_t* bboxes, int posnum, 
 			for (i = 0; i < negv->rnum; i++)
 			{
 				ccv_dpm_feature_vector_t* v = *(ccv_dpm_feature_vector_t**)ccv_array_get(negv, i);
-				assert(v->id >= 0 && v->id < model->count);
+				ASSERT(v->id >= 0 && v->id < model->count);
 				++negvnum[v->id];
 			}
 			if (negv->rnum <= ccv_max(params.negative_cache_size / 2, ccv_max(REGQ, MINI_BATCH)))
@@ -2021,7 +2036,7 @@ void ccv_dpm_mixture_model_new(char** posfiles, ccv_rect_t* bboxes, int posnum, 
 			PRINT(CCV_CLI_INFO, "\n");
 			previous_positive_loss = previous_negative_loss = 0;
 			uint64_t elapsed_time = _ccv_dpm_time_measure();
-			assert(negv->rnum < params.negative_cache_size + 64);
+			ASSERT(negv->rnum < params.negative_cache_size + 64);
 			for (t = 0; t < params.iterations; t++)
 			{
 				for (p = 0; p < model->count; p++)
@@ -2045,7 +2060,7 @@ void ccv_dpm_mixture_model_new(char** posfiles, ccv_rect_t* bboxes, int posnum, 
 							if (posv[k] == 0 || posv[k]->id != p)
 								continue;
 							double score = _ccv_dpm_vector_score(model, posv[k]); // the loss for mini-batch method (computed on model)
-							assert(!isnan(score));
+							ASSERT(!isnan(score));
 							if (score <= 1)
 								_ccv_dpm_stochastic_gradient_descent(_model, posv[k], 1, alpha * pos_weight, regz_rate, params.symmetric);
 						} else {
@@ -2053,7 +2068,7 @@ void ccv_dpm_mixture_model_new(char** posfiles, ccv_rect_t* bboxes, int posnum, 
 							if (v->id != p)
 								continue;
 							double score = _ccv_dpm_vector_score(model, v);
-							assert(!isnan(score));
+							ASSERT(!isnan(score));
 							if (score >= -1)
 								_ccv_dpm_stochastic_gradient_descent(_model, v, -1, alpha * neg_weight, regz_rate, params.symmetric);
 						}
@@ -2083,7 +2098,7 @@ void ccv_dpm_mixture_model_new(char** posfiles, ccv_rect_t* bboxes, int posnum, 
 					if (posv[i] != 0)
 					{
 						double score = _ccv_dpm_vector_score(model, posv[i]);
-						assert(!isnan(score));
+						ASSERT(!isnan(score));
 						double hinge_loss = ccv_max(0, 1.0 - score);
 						positive_loss += hinge_loss;
 						double pos_weight = sqrt((double)negvnum[posv[i]->id] / posvnum[posv[i]->id] * params.balance); // positive weight
@@ -2094,7 +2109,7 @@ void ccv_dpm_mixture_model_new(char** posfiles, ccv_rect_t* bboxes, int posnum, 
 				{
 					ccv_dpm_feature_vector_t* v = *(ccv_dpm_feature_vector_t**)ccv_array_get(negv, i);
 					double score = _ccv_dpm_vector_score(model, v);
-					assert(!isnan(score));
+					ASSERT(!isnan(score));
 					double hinge_loss = ccv_max(0, 1.0 + score);
 					negative_loss += hinge_loss;
 					double neg_weight = sqrt((double)posvnum[v->id] / negvnum[v->id] / params.balance); // negative weight
@@ -2129,7 +2144,7 @@ void ccv_dpm_mixture_model_new(char** posfiles, ccv_rect_t* bboxes, int posnum, 
 				if (posv[i])
 				{
 					scores[j] = _ccv_dpm_vector_score(model, posv[i]);
-					assert(!isnan(scores[j]));
+					ASSERT(!isnan(scores[j]));
 					j++;
 				}
 			_ccv_dpm_score_qsort(scores, j, 0);
@@ -2460,7 +2475,7 @@ ccv_dpm_mixture_model_t* ccv_dpm_read_mixture_model(const char* directory)
 	int count;
 	char flag;
 	fscanf(r, "%c", &flag);
-	assert(flag == '.');
+	ASSERT(flag == '.');
 	fscanf(r, "%d", &count);
 	ccv_dpm_root_classifier_t* root_classifier = (ccv_dpm_root_classifier_t*)ccmalloc(sizeof(ccv_dpm_root_classifier_t) * count);
 	memset(root_classifier, 0, sizeof(ccv_dpm_root_classifier_t) * count);
@@ -2536,3 +2551,4 @@ void ccv_dpm_mixture_model_free(ccv_dpm_mixture_model_t* model)
 {
 	ccfree(model);
 }
+
