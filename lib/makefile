@@ -3,7 +3,7 @@ include config.mk
 # CC += -g -fsanitize=address -fno-omit-frame-pointer # -fprofile-arcs -ftest-coverage
 CFLAGS := -O3 -ffast-math -Wall $(CFLAGS)
 NVFLAGS := -O3 $(NVFLAGS)
-CXXFLAGS := -I/home/mbrosowsky/miniconda2/envs/dpm/include -stdlib=libstdc++ -std=c++11
+CXXFLAGS := -I/home/mbrosowsky/miniconda2/envs/dpm/include -stdlib=libstdc++ -std=c++11 
 
 .PHONY: all clean
 
@@ -33,5 +33,5 @@ ccv_dpm.o: ccv_dpm.c ccv.h ccv_internal.h cuda/cwc.h cuda/cwc_helper.h modificat
 %.o: %.cu ccv.h cuda/cwc.h cuda/cwc_internal.h cuda/cwc_helper.h
 	$(NVCC) $< -o $@ -c $(NVFLAGS)
 
-%.o: %.cxx modifications.h
+%.o: %.cxx modifications.h 
 	$(CXX) $< -o $@ -c $(CXXFLAGS) 

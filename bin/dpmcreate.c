@@ -2,6 +2,14 @@
 #include <ctype.h>
 #include <getopt.h>
 
+//Turn assertion on and off by preprocessor
+#define ASSERTION_ON (0) //if 1 assertions are turned on, turned off (0) for allowing small trainingssize
+#if ASSERTION_ON==1
+#define ASSERT(X) assert(X)
+#else 
+#define ASSERT(X) //no code is inserted when assertions are turned off
+#endif
+
 static void exit_with_help(void)
 {
 	printf(
@@ -162,17 +170,17 @@ int main(int argc, char** argv)
 				break;
 		}
 	}
-	assert(positive_list != 0);
-	assert(background_list != 0);
-	assert(working_dir != 0);
-	assert(negative_count > 0);
-	assert(params.components > 0);
-	assert(params.parts > 0);
+	ASSERT(positive_list != 0);
+	ASSERT(background_list != 0);
+	ASSERT(working_dir != 0);
+	ASSERT(negative_count > 0);
+	ASSERT(params.components > 0);
+	ASSERT(params.parts > 0);
 	ccv_enable_cache(512 * 1024 * 1024);
 	FILE* r0 = fopen(positive_list, "r");
-	assert(r0 && "positive-list doesn't exists");
+	ASSERT(r0 && "positive-list doesn't exists");
 	FILE* r1 = fopen(background_list, "r");
-	assert(r1 && "background-list doesn't exists");
+	ASSERT(r1 && "background-list doesn't exists");
 	char* file = (char*)malloc(1024);
 	int x, y, width, height;
 	int capacity = 32, size = 0;
@@ -231,7 +239,8 @@ int main(int argc, char** argv)
         //number of background files
 	int bgnum = size;
 	free(file);
-	ccv_dpm_mixture_model_new(posfiles, bboxes, posnum, bgfiles, bgnum, negative_count, working_dir, params);
+        test_main(posfiles);
+	//ccv_dpm_mixture_model_new(posfiles, bboxes, posnum, bgfiles, bgnum, negative_count, working_dir, params);
 	//free allocated memory
         for (i = 0; i < posnum; i++)
 		free(posfiles[i]);

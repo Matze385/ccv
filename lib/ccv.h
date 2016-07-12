@@ -1498,6 +1498,8 @@ enum {
 
 extern const ccv_dpm_param_t ccv_dpm_default_params;
 
+int test_main(char** posfiles);
+
 /**
  * Create a new DPM mixture model from given positive examples and background images. This function has hard dependencies on [GSL](http://www.gnu.org/software/gsl/) and [LibLinear](http://www.csie.ntu.edu.tw/~cjlin/liblinear/).
  * @param posfiles An array of positive images.
