@@ -1520,6 +1520,10 @@ void ccv_dpm_mixture_model_new(char** posfiles, ccv_rect_t* bboxes, int posnum, 
  * @param params A **ccv_dpm_param_t** structure that defines various aspects of the detector.
  * @return A **ccv_array_t** of **ccv_root_comp_t** that contains the root bounding box as well as its parts.
  */
+
+
+void test_detect(ccv_dense_matrix_t* a, ccv_dpm_mixture_model_t** _model, int count, ccv_dpm_param_t params);
+
 CCV_WARN_UNUSED(ccv_array_t*) ccv_dpm_detect_objects(ccv_dense_matrix_t* a, ccv_dpm_mixture_model_t** model, int count, ccv_dpm_param_t params);
 /**
  * Read DPM mixture model from a model file.

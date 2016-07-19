@@ -75,5 +75,25 @@ extern "C" int ccv_read_modified(const char *file_name, const char *dataset_name
     return 1;     
 }
 
+extern "C" int ccv_write_modified(ccv_dense_matrix_t *a, const char *file_name, const char *dataset_name, int ch)
+{
+    //create MultiArray
+    vigra::MultiArrayShape<3>::type shape(ch, a->cols, a->rows);
+    vigra::MultiArray<3, float> array(shape);
+    float *dptr = a->data.f32;
+    for(int row=0; row<a->rows; row++)
+    {
+        for(int col=0; col<a->cols; col++)
+        {
+            for(int c=0; c<ch; c++)
+            {
+                array(c,col,row) = dptr[c]; 
+            }
+            dptr += ch;
+        }
+    }
+    vigra::writeHDF5(file_name, dataset_name, array);
+    return 1;
+}
 
 

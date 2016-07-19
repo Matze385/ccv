@@ -239,8 +239,8 @@ int main(int argc, char** argv)
         //number of background files
 	int bgnum = size;
 	free(file);
-        test_main(posfiles);
-	//ccv_dpm_mixture_model_new(posfiles, bboxes, posnum, bgfiles, bgnum, negative_count, working_dir, params);
+        //test_main(posfiles);
+	ccv_dpm_mixture_model_new(posfiles, bboxes, posnum, bgfiles, bgnum, negative_count, working_dir, params);
 	//free allocated memory
         for (i = 0; i < posnum; i++)
 		free(posfiles[i]);

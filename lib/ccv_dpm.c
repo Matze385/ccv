@@ -383,7 +383,7 @@ static const int _ccv_dpm_sym_lut_modified[] = { 0, 1, 2, 3 };
 
 static void _ccv_dpm_check_root_classifier_symmetry(ccv_dense_matrix_t* w)
 {
-	ASSERT(CCV_GET_CHANNEL(w->type) == CCV_NUMBER_CHANNELS && CCV_GET_DATA_TYPE(w->type) == CCV_32F);
+	assert(CCV_GET_CHANNEL(w->type) == CCV_NUMBER_CHANNELS && CCV_GET_DATA_TYPE(w->type) == CCV_32F);
 	float *w_ptr = w->data.f32;
 	int i, j, k;
 	for (i = 0; i < w->rows; i++)
@@ -392,7 +392,7 @@ static void _ccv_dpm_check_root_classifier_symmetry(ccv_dense_matrix_t* w)
 		{
 			for (k = 0; k < CCV_NUMBER_CHANNELS; k++)
 			{
-				double v = fabs(w_ptr[j * CCV_NUMBER_CHANNELS + k] - w_ptr[(w->cols - 1 - j) * CCV_NUMBER_CHANNELS + _ccv_dpm_sym_lut[k]]);
+				double v = fabs(w_ptr[j * CCV_NUMBER_CHANNELS + k] - w_ptr[(w->cols - 1 - j) * CCV_NUMBER_CHANNELS + _ccv_dpm_sym_lut_modified[k]]);
 				if (v > 0.002)
 					PRINT(CCV_CLI_INFO, "symmetric violation at (%d, %d, %d), off by: %f\n", i, j, k, v);
 			}
@@ -443,8 +443,9 @@ static void _ccv_dpm_collect_examples_randomly(gsl_rng* rng, ccv_array_t** negex
 			if (gsl_rng_uniform(rng) < p)
 			{
 				ccv_dense_matrix_t* image = 0;
-				ccv_read(bgfiles[i], &image, (grayscale ? CCV_IO_GRAY : 0) | CCV_IO_ANY_FILE);
-				ASSERT(image != 0);
+				//ccv_read(bgfiles[i], &image, (grayscale ? CCV_IO_GRAY : 0) | CCV_IO_ANY_FILE);
+                                ccv_read_modified(bgfiles[i], "data", &image, CCV_NUMBER_CHANNELS);
+				assert(image != 0);
 				if (image->rows - mrows * CCV_DPM_WINDOW_SIZE < 0 ||
 					image->cols - mcols * CCV_DPM_WINDOW_SIZE < 0)
 				{
@@ -457,12 +458,12 @@ static void _ccv_dpm_collect_examples_randomly(gsl_rng* rng, ccv_array_t** negex
 				{
 					ccv_dense_matrix_t* slice = 0;
 					ccv_slice(image, (ccv_matrix_t**)&slice, 0, y + ((mrows - rows[j]) * CCV_DPM_WINDOW_SIZE + 1) / 2, x + ((mcols - cols[j]) * CCV_DPM_WINDOW_SIZE + 1) / 2, rows[j] * CCV_DPM_WINDOW_SIZE, cols[j] * CCV_DPM_WINDOW_SIZE);
-					ASSERT(y + ((mrows - rows[j]) * CCV_DPM_WINDOW_SIZE + 1) / 2 >= 0 &&
+					assert(y + ((mrows - rows[j]) * CCV_DPM_WINDOW_SIZE + 1) / 2 >= 0 &&
 						   y + ((mrows - rows[j]) * CCV_DPM_WINDOW_SIZE + 1) / 2 + rows[j] * CCV_DPM_WINDOW_SIZE <= image->rows &&
 						   x + ((mcols - cols[j]) * CCV_DPM_WINDOW_SIZE + 1) / 2 >= 0 &&
 						   x + ((mcols - cols[j]) * CCV_DPM_WINDOW_SIZE + 1) / 2 + cols[j] * CCV_DPM_WINDOW_SIZE <= image->cols);
 					ccv_dense_matrix_t* hog = 0;
-					ccv_hog(slice, &hog, 0, 9, CCV_DPM_WINDOW_SIZE);
+					ccv_hog_modified(slice, &hog, 0, 9, CCV_DPM_WINDOW_SIZE);
 					ccv_matrix_free(slice);
 					ccv_dpm_feature_vector_t vector = {
 						.id = j,
@@ -470,7 +471,7 @@ static void _ccv_dpm_collect_examples_randomly(gsl_rng* rng, ccv_array_t** negex
 						.part = 0,
 					};
 					ccv_make_matrix_mutable(hog);
-					ASSERT(hog->rows == rows[j] && hog->cols == cols[j] && CCV_GET_CHANNEL(hog->type) == CCV_NUMBER_CHANNELS && CCV_GET_DATA_TYPE(hog->type) == CCV_32F);
+					assert(hog->rows == rows[j] && hog->cols == cols[j] && CCV_GET_CHANNEL(hog->type) == CCV_NUMBER_CHANNELS && CCV_GET_DATA_TYPE(hog->type) == CCV_32F);
 					vector.root.w = hog;
 					ccv_array_push(negex[j], &vector);
 				}
@@ -520,8 +521,9 @@ static ccv_array_t* _ccv_dpm_summon_examples_by_rectangle(char** posfiles, ccv_r
 			continue;
 		}
 		ccv_dense_matrix_t* image = 0;
-		ccv_read(posfiles[i], &image, (grayscale ? CCV_IO_GRAY : 0) | CCV_IO_ANY_FILE);
-		ASSERT(image != 0);
+		//ccv_read(posfiles[i], &image, (grayscale ? CCV_IO_GRAY : 0) | CCV_IO_ANY_FILE);
+                ccv_read_modified(posfiles[i], "data", &image, CCV_NUMBER_CHANNELS);
+		assert(image != 0);
 		ccv_dense_matrix_t* up2x = 0;
 		ccv_sample_up(image, &up2x, 0, 0, 0);
 		ccv_matrix_free(image);
@@ -533,10 +535,10 @@ static ccv_array_t* _ccv_dpm_summon_examples_by_rectangle(char** posfiles, ccv_r
 		ccv_resample(slice, &resize, 0, rows * CCV_DPM_WINDOW_SIZE, cols * CCV_DPM_WINDOW_SIZE, CCV_INTER_AREA);
 		ccv_matrix_free(slice);
 		ccv_dense_matrix_t* hog = 0;
-		ccv_hog(resize, &hog, 0, 9, CCV_DPM_WINDOW_SIZE);
+		ccv_hog_modified(resize, &hog, 0, 9, CCV_DPM_WINDOW_SIZE);
 		ccv_matrix_free(resize);
 		ccv_make_matrix_mutable(hog);
-		ASSERT(hog->rows == rows && hog->cols == cols && CCV_GET_CHANNEL(hog->type) == CCV_NUMBER_CHANNELS && CCV_GET_DATA_TYPE(hog->type) == CCV_32F);
+		assert(hog->rows == rows && hog->cols == cols && CCV_GET_CHANNEL(hog->type) == CCV_NUMBER_CHANNELS && CCV_GET_DATA_TYPE(hog->type) == CCV_32F);
 		vector.root.w = hog;
 		ccv_array_push(posv, &vector);
 		FLUSH(CCV_CLI_INFO, " - generating positive examples for model %d : %d / %d", id, i + 1, posnum);
@@ -610,7 +612,7 @@ static void _ccv_dpm_initialize_root_classifier(gsl_rng* rng, ccv_dpm_root_class
 						for (k = 0; k < CCV_NUMBER_CHANNELS; k++)
 						{
 							features[j].index = j + 1;
-							features[j].value = hptr[(cols - 1 - x) * CCV_NUMBER_CHANNELS + _ccv_dpm_sym_lut[k]];
+							features[j].value = hptr[(cols - 1 - x) * CCV_NUMBER_CHANNELS + _ccv_dpm_sym_lut_modified[k]];
 							++j;
 						}
 					hptr += hog->cols * CCV_NUMBER_CHANNELS;
@@ -674,7 +676,7 @@ static void _ccv_dpm_initialize_root_classifier(gsl_rng* rng, ccv_dpm_root_class
 						for (k = 0; k < CCV_NUMBER_CHANNELS; k++)
 						{
 							features[j].index = j + 1;
-							features[j].value = hptr[(cols - 1 - x) * CCV_NUMBER_CHANNELS + _ccv_dpm_sym_lut[k]];
+							features[j].value = hptr[(cols - 1 - x) * CCV_NUMBER_CHANNELS + _ccv_dpm_sym_lut_modified[k]];
 							++j;
 						}
 					hptr += hog->cols * CCV_NUMBER_CHANNELS;
@@ -719,7 +721,7 @@ static void _ccv_dpm_initialize_root_classifier(gsl_rng* rng, ccv_dpm_root_class
 	}
         //train linear support vector machine out of liblinear
 	struct model* linear = train(&prob, &linear_parameters);
-	ASSERT(linear != 0);
+	assert(linear != 0);
 	PRINT(CCV_CLI_INFO, " - model->label[0]: %d, model->nr_class: %d, model->nr_feature: %d\n", linear->label[0], linear->nr_class, linear->nr_feature);
 	if (symmetric)
 	{
@@ -728,7 +730,7 @@ static void _ccv_dpm_initialize_root_classifier(gsl_rng* rng, ccv_dpm_root_class
 		{
 			for (x = 0; x < cols2c; x++)
 				for (k = 0; k < CCV_NUMBER_CHANNELS; k++)
-					wptr[(cols - 1 - x) * CCV_NUMBER_CHANNELS + _ccv_dpm_sym_lut[k]] = wptr[x * CCV_NUMBER_CHANNELS + k] = linear->w[(y * cols2c + x) * CCV_NUMBER_CHANNELS + k];
+					wptr[(cols - 1 - x) * CCV_NUMBER_CHANNELS + _ccv_dpm_sym_lut_modified[k]] = wptr[x * CCV_NUMBER_CHANNELS + k] = linear->w[(y * cols2c + x) * CCV_NUMBER_CHANNELS + k];
 			wptr += cols * CCV_NUMBER_CHANNELS;
 		}
 		// since for symmetric, lsvm only computed half features, to compensate that, we doubled the constant.
@@ -743,6 +745,7 @@ static void _ccv_dpm_initialize_root_classifier(gsl_rng* rng, ccv_dpm_root_class
 	for (j = 0; j < prob.l; j++)
 		free(prob.x[j]);
 	free(prob.x);
+        ccv_write_modified(root_classifier->root.w, "../samples/fly/root_initialized.h5", "data", CCV_NUMBER_CHANNELS);
 	ccv_make_matrix_immutable(root_classifier->root.w);
 }
 
@@ -760,7 +763,8 @@ static void _ccv_dpm_initialize_part_classifiers(ccv_dpm_root_classifier_t* root
 	root_classifier->count = parts;
 	root_classifier->part = (ccv_dpm_part_classifier_t*)ccmalloc(sizeof(ccv_dpm_part_classifier_t) * parts);
 	memset(root_classifier->part, 0, sizeof(ccv_dpm_part_classifier_t) * parts);
-	double area = w->rows * w->cols / (double)parts;
+	double area = w->rows * w->cols / ((double)parts +1.);
+	//double area = w->rows * w->cols / (double)parts;
 	for (i = 0; i < parts;)
 	{
                 //search for positions and size of part filters
@@ -786,7 +790,10 @@ static void _ccv_dpm_initialize_part_classifiers(ccv_dpm_root_classifier_t* root
 		for (j = 1; (j < area + 1) && (j * 3 <= w->rows * 2); j++)
 		{
 			k = (int)(area / j + 0.5);
-			if (k < 1 || k * 3 > w->cols * 2)
+                        PRINT(CCV_CLI_INFO, "");
+			//if (k < 1 || k * 3 > w->cols * 2)
+			//	continue;
+			if (k < 1 || k * 7 > w->cols * 5)
 				continue;
 			if (j > k * 2 || k > j * 2)
 				continue;
@@ -911,12 +918,12 @@ static double _ccv_dpm_vector_score(ccv_dpm_mixture_model_t* model, ccv_dpm_feat
 	ccv_dpm_root_classifier_t* root_classifier = model->root + v->id;
 	double score = root_classifier->beta;
 	int i, k, ch = CCV_GET_CHANNEL(v->root.w->type);
-	ASSERT(ch == CCV_NUMBER_CHANNELS);
+	assert(ch == CCV_NUMBER_CHANNELS);
 	float *vptr = v->root.w->data.f32;
 	float *wptr = root_classifier->root.w->data.f32;
 	for (i = 0; i < v->root.w->rows * v->root.w->cols * ch; i++)
 		score += wptr[i] * vptr[i];
-	ASSERT(v->count == root_classifier->count || (v->count == 0 && v->part == 0));
+	assert(v->count == root_classifier->count || (v->count == 0 && v->part == 0));
 	for (k = 0; k < v->count; k++)
 	{
 		ccv_dpm_part_classifier_t* part_classifier = root_classifier->part + k;
@@ -1013,13 +1020,13 @@ static ccv_dpm_feature_vector_t* _ccv_dpm_collect_best(ccv_dense_matrix_t* image
 {
 	int i, j, k, x, y;
 	double scale = pow(2.0, 1.0 / (params.interval + 1.0));
-	int next = params.interval + 1;
+	int next = 1;//params.interval + 1;
         //scale_upto: steps in feature pyramide to go up that root filter in model matches image size
-	int scale_upto = _ccv_dpm_scale_upto(image, &model, 1, params.interval);
+	int scale_upto = 0;//_ccv_dpm_scale_upto(image, &model, 1, params.interval);
 	if (scale_upto < 0)
 		return 0;
 	ccv_dense_matrix_t** pyr = (ccv_dense_matrix_t**)alloca((scale_upto + next * 2) * sizeof(ccv_dense_matrix_t*));
-	_ccv_dpm_feature_pyramid(image, pyr, scale_upto, params.interval);
+	_ccv_dpm_feature_pyramid_modified(image, pyr, scale_upto, params.interval);
 	float best = -FLT_MAX;
 	ccv_dpm_feature_vector_t* v = 0;
 	for (i = 0; i < model->count; i++)
@@ -1031,13 +1038,15 @@ static ccv_dpm_feature_vector_t* _ccv_dpm_collect_best(ccv_dense_matrix_t* image
 		for (j = next; j < scale_upto + next * 2; j++)
 		{
 			ccv_size_t size = ccv_size((int)(root_classifier->root.w->cols * CCV_DPM_WINDOW_SIZE * scale_x + 0.5), (int)(root_classifier->root.w->rows * CCV_DPM_WINDOW_SIZE * scale_y + 0.5));
-			if (ccv_min((double)(size.width * size.height), (double)(bbox.width * bbox.height)) / 
+			/* not used because scale is fixed
+                        if (ccv_min((double)(size.width * size.height), (double)(bbox.width * bbox.height)) / 
 				ccv_max((double)(bbox.width * bbox.height), (double)(size.width * size.height)) < overlap)
 			{
 				scale_x *= scale;
 				scale_y *= scale;
 				continue;
 			}
+                        */
                         //response of root filter, deformation and part filter saved in root_feature
 			ccv_dense_matrix_t* root_feature = 0;
                         //CCV_DPM_PART_MAX by default 10
@@ -1109,12 +1118,12 @@ static ccv_array_t* _ccv_dpm_collect_all(gsl_rng* rng, ccv_dense_matrix_t* image
 {
 	int i, j, k, x, y;
 	double scale = pow(2.0, 1.0 / (params.interval + 1.0));
-	int next = params.interval + 1;
-	int scale_upto = _ccv_dpm_scale_upto(image, &model, 1, params.interval);
+	int next = 1; //params.interval + 1;
+	int scale_upto = 0; // _ccv_dpm_scale_upto(image, &model, 1, params.interval);
 	if (scale_upto < 0)
 		return 0;
 	ccv_dense_matrix_t** pyr = (ccv_dense_matrix_t**)alloca((scale_upto + next * 2) * sizeof(ccv_dense_matrix_t*));
-	_ccv_dpm_feature_pyramid(image, pyr, scale_upto, params.interval);
+	_ccv_dpm_feature_pyramid_modified(image, pyr, scale_upto, params.interval);
         //array of 64 feature vectors to store 
 	ccv_array_t* av = ccv_array_new(sizeof(ccv_dpm_feature_vector_t*), 64, 0);
 	int enough = 64 / model->count;
@@ -1190,7 +1199,8 @@ static void _ccv_dpm_collect_from_background(ccv_array_t* av, gsl_rng* rng, char
                 //
 		FLUSH(CCV_CLI_INFO, " - collecting negative examples -- (%d%%)", av->rnum * 100 / params.negative_cache_size);
 		ccv_dense_matrix_t* image = 0;
-		ccv_read(bgfiles[order[i]], &image, (params.grayscale ? CCV_IO_GRAY : 0) | CCV_IO_ANY_FILE);
+		//ccv_read_modified(bgfiles[order[i]], &image, (params.grayscale ? CCV_IO_GRAY : 0) | CCV_IO_ANY_FILE);
+                ccv_read_modified(bgfiles[order[i]], "data", &image, CCV_NUMBER_CHANNELS);
 		ccv_array_t* at = _ccv_dpm_collect_all(rng, image, model, params.detector, threshold);
 		if (at)
 		{
@@ -1221,7 +1231,8 @@ static void _ccv_dpm_initialize_root_rectangle_estimator(ccv_dpm_mixture_model_t
 	{
 		FLUSH(CCV_CLI_INFO, " - collecting responses from positive examples : %d%%", i * 100 / posnum);
 		ccv_dense_matrix_t* image = 0;
-		ccv_read(posfiles[i], &image, (params.grayscale ? CCV_IO_GRAY : 0) | CCV_IO_ANY_FILE);
+		//ccv_read(posfiles[i], &image, (params.grayscale ? CCV_IO_GRAY : 0) | CCV_IO_ANY_FILE);
+                ccv_read_modified(posfiles[i], "data", &image, CCV_NUMBER_CHANNELS);
 		posv[i] = _ccv_dpm_collect_best(image, model, bboxes[i], params.include_overlap, params.detector);
 		if (posv[i])
 			++num_per_model[posv[i]->id];
@@ -1349,7 +1360,7 @@ static void _ccv_dpm_stochastic_gradient_descent(ccv_dpm_mixture_model_t* model,
 				for (c = 0; c < ch; c++)
 				{
 					wptr[j * ch + c] += alpha * y * Cn * vptr[j * ch + c];
-					wptr[j * ch + c] += alpha * y * Cn * vptr[(v->root.w->cols - 1 - j) * ch + _ccv_dpm_sym_lut[c]];
+					wptr[j * ch + c] += alpha * y * Cn * vptr[(v->root.w->cols - 1 - j) * ch + _ccv_dpm_sym_lut_modified[c]];
 				}
 			vptr += v->root.w->cols * ch;
 			wptr += root_classifier->root.w->cols * ch;
@@ -1393,7 +1404,7 @@ static void _ccv_dpm_stochastic_gradient_descent(ccv_dpm_mixture_model_t* model,
 						for (c = 0; c < ch; c++)
 						{
 							wptr[j * ch + c] += alpha * y * Cn * vptr[j * ch + c];
-							wptr[j * ch + c] += alpha * y * Cn * vptr[(part_vector->w->cols - 1 - j) * ch + _ccv_dpm_sym_lut[c]];
+							wptr[j * ch + c] += alpha * y * Cn * vptr[(part_vector->w->cols - 1 - j) * ch + _ccv_dpm_sym_lut_modified[c]];
 						}
 					vptr += part_vector->w->cols * ch;
 					wptr += part_classifier->w->cols * ch;
@@ -1420,7 +1431,7 @@ static void _ccv_dpm_stochastic_gradient_descent(ccv_dpm_mixture_model_t* model,
 				{
 					for (j = 0; j < part_vector->w->cols; j++)
 						for (c = 0; c < ch; c++)
-							wptr[j * ch + c] += alpha * y * Cn * vptr[(part_vector->w->cols - 1 - j) * ch + _ccv_dpm_sym_lut[c]];
+							wptr[j * ch + c] += alpha * y * Cn * vptr[(part_vector->w->cols - 1 - j) * ch + _ccv_dpm_sym_lut_modified[c]];
 					vptr += part_vector->w->cols * ch;
 					wptr += other_part_classifier->w->cols * ch;
 				}
@@ -1794,7 +1805,21 @@ static ccv_dpm_mixture_model_t* _ccv_dpm_optimize_root_mixture_model(gsl_rng* rn
 }
 
 int test_main(char** posfiles)
-{       
+{    
+        char* file_name[3];
+        file_name[0] = "1";
+        file_name[1] = "2";
+        file_name[2] = "3";
+        for(int i=0; i<3; i++)
+        {
+        //char file_name[128] = "../samples/fly/filters/part_filter_";
+        //int length = sizeof("../samples/fly/filters/part_filter_");
+        //file_name[length] = i+'0';
+        //strcat(file_name, str_i);
+        //strcat(file_name, (char)i);
+        //file_name[length+1] = "_learned.h5";
+        PRINT(CCV_CLI_INFO, file_name[i]);
+        }   
         ccv_dense_matrix_t *res = 0;
         //test read in 
         ccv_read_modified(posfiles[0], "data", &res, CCV_NUMBER_CHANNELS);
@@ -1899,8 +1924,13 @@ void ccv_dpm_mixture_model_new(char** posfiles, ccv_rect_t* bboxes, int posnum, 
 	for (i = 0; i < posnum; i++)
 		areas[i] = bboxes[i].width * bboxes[i].height;
 	_ccv_dpm_area_qsort(areas, posnum, 0);
+        double mean_area = 0;
+        for(i = 0; i < posnum; i++)
+                mean_area += areas[i];
+        mean_area /= posnum;
+        int area = (int)mean_area;
 	// so even the object is 1/4 in size, we can still detect them (in detection phase, we start at 2x image)
-	int area = ccv_clamp(areas[(int)(posnum * 0.2 + 0.5)], params.min_area, params.max_area);
+	//int area = ccv_clamp(areas[(int)(posnum * 0.2 + 0.5)], params.min_area, params.max_area);
 	ccfree(areas);
 	innum = 0;
 	_ccv_dpm_read_checkpoint(model, checkpoint);
@@ -1975,6 +2005,7 @@ void ccv_dpm_mixture_model_new(char** posfiles, ccv_rect_t* bboxes, int posnum, 
 				ccv_dpm_root_classifier_t* root_classifier = model->root + i;
 				_ccv_dpm_check_root_classifier_symmetry(root_classifier->root.w);
 			}
+                //assert(8<2);
 		if (params.components > 1)
 		{
 			/* TODO: coordinate-descent for lsvm */
@@ -2041,7 +2072,8 @@ void ccv_dpm_mixture_model_new(char** posfiles, ccv_rect_t* bboxes, int posnum, 
 			{
 				FLUSH(CCV_CLI_INFO, " - collecting responses from positive examples : %d%%", i * 100 / posnum);
 				ccv_dense_matrix_t* image = 0;
-				ccv_read(posfiles[i], &image, (params.grayscale ? CCV_IO_GRAY : 0) | CCV_IO_ANY_FILE);
+				//ccv_read(posfiles[i], &image, (params.grayscale ? CCV_IO_GRAY : 0) | CCV_IO_ANY_FILE);
+                                ccv_read_modified(posfiles[i], "data", &image, CCV_NUMBER_CHANNELS);
 				posv[i] = _ccv_dpm_collect_best(image, model, bboxes[i], params.include_overlap, params.detector);
 				ccv_matrix_free(image);
 			}
@@ -2251,6 +2283,16 @@ void ccv_dpm_mixture_model_new(char** posfiles, ccv_rect_t* bboxes, int posnum, 
 		}
 		ccv_array_free(negv);
 	}
+        //save learned filter as hdf5 files
+        ccv_write_modified(model->root->root.w, "../samples/fly/root_filter_learned.h5", "data", CCV_NUMBER_CHANNELS);
+        char* file_name[3];
+        file_name[0] = "../samples/fly/part_filter_1_learned.h5";
+        file_name[1] = "../samples/fly/part_filter_2_learned.h5";
+        file_name[2] = "../samples/fly/part_filter_3_learned.h5";
+        for(int i=0; i<model->root->count; i++)
+        {
+                ccv_write_modified((model->root->part+i)->w, file_name[i], "data", CCV_NUMBER_CHANNELS);
+        }
 	remove(neg_vector_checkpoint);
 	ccfree(order);
 	ccfree(posv);
@@ -2309,16 +2351,57 @@ static int _ccv_is_equal_same_class(const void* _r1, const void* _r2, void* data
 		(int)(r2->rect.height * 1.5 + 0.5) >= r1->rect.height;
 }
 
+void test_detect(ccv_dense_matrix_t* a, ccv_dpm_mixture_model_t** _model, int count, ccv_dpm_param_t params)
+{
+        //load model and compute pyramid
+	ccv_dpm_mixture_model_t* model = _model[0];
+        double dxx = model->root->part[0].dxx;
+        double dyy = model->root->part[0].dyy;
+        double dxx_2 = model->root->part[1].dxx;
+        double dyy_2 = model->root->part[1].dyy;
+        PRINT(CCV_CLI_INFO,"spring constant part 1: dx=%f, dy=%f, part 2: dx=%f, dy=%f", dxx, dyy, dxx_2, dyy_2);
+	ccv_dense_matrix_t** pyr = (ccv_dense_matrix_t**)alloca(2 * sizeof(ccv_dense_matrix_t*));
+	_ccv_dpm_feature_pyramid_modified(a, pyr, 0, 0);
+
+        ccv_dpm_root_classifier_t* root = model->root;
+        ccv_dense_matrix_t* root_feature = 0;
+        ccv_dense_matrix_t* part_feature[CCV_DPM_PART_MAX];
+        ccv_dense_matrix_t* dx[CCV_DPM_PART_MAX];
+        ccv_dense_matrix_t* dy[CCV_DPM_PART_MAX];
+	_ccv_dpm_compute_score(root, pyr[1], pyr[0], &root_feature, part_feature, dx, dy);
+        ccv_write_modified(root_feature, "../samples/fly/filters/output_scoremap.h5", "data", 1);
+        const* filenames[root->count];
+        filenames[0] =  "../samples/fly/filters/output_part_1_scoremap.h5";
+        filenames[1] =  "../samples/fly/filters/output_part_2_scoremap.h5";
+        //filenames[2] =  "../samples/fly/filters/output_part_3_scoremap.h5";
+        for (int k = 0; k < root->count; k++)
+        {
+                ccv_write_modified(part_feature[k], filenames[k], "data", 1);        
+        }
+        //free memory
+        for (int k = 0; k < root->count; k++)
+        {
+                ccv_matrix_free(part_feature[k]);
+                ccv_matrix_free(dx[k]);
+                ccv_matrix_free(dy[k]);
+        }
+        ccv_matrix_free(root_feature);
+        for (int i = 0; i < 2; i++)
+		ccv_matrix_free(pyr[i]);
+
+
+}
+
 ccv_array_t* ccv_dpm_detect_objects(ccv_dense_matrix_t* a, ccv_dpm_mixture_model_t** _model, int count, ccv_dpm_param_t params)
 {
 	int c, i, j, k, x, y;
 	double scale = pow(2.0, 1.0 / (params.interval + 1.0));
-	int next = params.interval + 1;
-	int scale_upto = _ccv_dpm_scale_upto(a, _model, count, params.interval);
+	int next = 1; //= params.interval + 1;
+	int scale_upto = 0; // _ccv_dpm_scale_upto(a, _model, count, params.interval);
 	if (scale_upto < 0) // image is too small to be interesting
 		return 0;
 	ccv_dense_matrix_t** pyr = (ccv_dense_matrix_t**)alloca((scale_upto + next * 2) * sizeof(ccv_dense_matrix_t*));
-	_ccv_dpm_feature_pyramid(a, pyr, scale_upto, params.interval);
+	_ccv_dpm_feature_pyramid_modified(a, pyr, scale_upto, params.interval);
 	ccv_array_t* idx_seq;
 	ccv_array_t* seq = ccv_array_new(sizeof(ccv_root_comp_t), 64, 0);
 	ccv_array_t* seq2 = ccv_array_new(sizeof(ccv_root_comp_t), 64, 0);
@@ -2328,6 +2411,7 @@ ccv_array_t* ccv_dpm_detect_objects(ccv_dense_matrix_t* a, ccv_dpm_mixture_model
 		ccv_dpm_mixture_model_t* model = _model[c];
 		double scale_x = 1.0;
 		double scale_y = 1.0;
+                //collect bbinfo in seq of all pixels with score greater than threshold in params
 		for (i = next; i < scale_upto + next * 2; i++)
 		{
 			for (j = 0; j < model->count; j++)
@@ -2337,6 +2421,7 @@ ccv_array_t* ccv_dpm_detect_objects(ccv_dense_matrix_t* a, ccv_dpm_mixture_model
 				ccv_dense_matrix_t* part_feature[CCV_DPM_PART_MAX];
 				ccv_dense_matrix_t* dx[CCV_DPM_PART_MAX];
 				ccv_dense_matrix_t* dy[CCV_DPM_PART_MAX];
+                                //save scoremap in root_feature
 				_ccv_dpm_compute_score(root, pyr[i], pyr[i - next], &root_feature, part_feature, dx, dy);
 				int rwh = (root->root.w->rows - 1) / 2, rww = (root->root.w->cols - 1) / 2;
 				int rwh_1 = root->root.w->rows / 2, rww_1 = root->root.w->cols / 2;
@@ -2354,6 +2439,7 @@ ccv_array_t* ccv_dpm_detect_objects(ccv_dense_matrix_t* a, ccv_dpm_mixture_model
 							ccv_root_comp_t comp;
 							comp.neighbors = 1;
 							comp.classification.id = c + 1;
+                                                        //save score at current location
 							comp.classification.confidence = f_ptr[x] + root->beta;
 							comp.pnum = root->count;
 							float drift_x = root->alpha[0],
@@ -2369,6 +2455,7 @@ ccv_array_t* ccv_dpm_detect_objects(ccv_dense_matrix_t* a, ccv_dpm_mixture_model
 								int offx = part->x + pww - rww * 2;
 								int iy = ccv_clamp(y * 2 + offy, pwh, part_feature[k]->rows - part->w->rows + pwh);
 								int ix = ccv_clamp(x * 2 + offx, pww, part_feature[k]->cols - part->w->cols + pww);
+                                                                //get deformation at current location 
 								int ry = ccv_get_dense_matrix_cell_value_by(CCV_32S | CCV_C1, dy[k], iy, ix, 0);
 								int rx = ccv_get_dense_matrix_cell_value_by(CCV_32S | CCV_C1, dx[k], iy, ix, 0);
 								drift_x += part->alpha[0] * rx + part->alpha[1] * ry;
@@ -2407,6 +2494,7 @@ ccv_array_t* ccv_dpm_detect_objects(ccv_dense_matrix_t* a, ccv_dpm_mixture_model
 			idx_seq = 0;
 			ccv_array_clear(seq2);
 			// group retrieved rectangles in order to filter out noise
+                        // assign each location with score>threshold an id 
 			int ncomp = ccv_array_group(seq, &idx_seq, _ccv_is_equal_same_class, 0);
 			ccv_root_comp_t* comps = (ccv_root_comp_t*)ccmalloc((ncomp + 1) * sizeof(ccv_root_comp_t));
 			memset(comps, 0, (ncomp + 1) * sizeof(ccv_root_comp_t));
