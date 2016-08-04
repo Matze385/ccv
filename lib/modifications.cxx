@@ -53,6 +53,7 @@ extern "C" int ccv_read_modified(const char *file_name, const char *dataset_name
     vigra::MultiArrayShape<3>::type shape(info.shape().begin());
     vigra::MultiArray<3, float> array(shape);
     vigra::readHDF5(info, array);
+    //printf("ch: %d shape[0]: %d", ch, (int)shape[0]);
     //check if channel number is correct
     assert(ch == shape[0]);
     int cols = shape[1], rows = shape[2]; //or other way round

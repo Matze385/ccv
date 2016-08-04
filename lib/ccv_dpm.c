@@ -23,13 +23,13 @@
 #endif
 
 #define CCV_DPM_WINDOW_SIZE (2)
-#define CCV_NUMBER_CHANNELS (4) //head, upper body, lower body, wings
+#define CCV_NUMBER_CHANNELS (3) //head, upper body, lower body, wings
 
 const ccv_dpm_param_t ccv_dpm_default_params = {
 	.interval = 8,
 	.min_neighbors = 1,
 	.flags = 0,
-	.threshold = 0.6, // 0.8
+	.threshold = 12., // 0.8
 };
 
 
@@ -379,7 +379,7 @@ static const int _ccv_dpm_sym_lut[] = { 2, 3, 0, 1,
 										4 + 0, 4 + 8, 4 + 7, 4 + 6, 4 + 5, 4 + 4, 4 + 3, 4 + 2, 4 + 1,
 										13 + 9, 13 + 8, 13 + 7, 13 + 6, 13 + 5, 13 + 4, 13 + 3, 13 + 2, 13 + 1, 13, 13 + 17, 13 + 16, 13 + 15, 13 + 14, 13 + 13, 13 + 12, 13 + 11, 13 + 10 };
 
-static const int _ccv_dpm_sym_lut_modified[] = { 0, 1, 2, 3 };
+static const int _ccv_dpm_sym_lut_modified[] = { 0, 1, 2 };
 
 static void _ccv_dpm_check_root_classifier_symmetry(ccv_dense_matrix_t* w)
 {
@@ -745,7 +745,7 @@ static void _ccv_dpm_initialize_root_classifier(gsl_rng* rng, ccv_dpm_root_class
 	for (j = 0; j < prob.l; j++)
 		free(prob.x[j]);
 	free(prob.x);
-        ccv_write_modified(root_classifier->root.w, "../samples/fly/root_initialized.h5", "data", CCV_NUMBER_CHANNELS);
+        ccv_write_modified(root_classifier->root.w, "../samples/larvae/filter/root_initialized.h5", "data", CCV_NUMBER_CHANNELS);
 	ccv_make_matrix_immutable(root_classifier->root.w);
 }
 
@@ -763,7 +763,7 @@ static void _ccv_dpm_initialize_part_classifiers(ccv_dpm_root_classifier_t* root
 	root_classifier->count = parts;
 	root_classifier->part = (ccv_dpm_part_classifier_t*)ccmalloc(sizeof(ccv_dpm_part_classifier_t) * parts);
 	memset(root_classifier->part, 0, sizeof(ccv_dpm_part_classifier_t) * parts);
-	double area = w->rows * w->cols / ((double)parts +1.);
+	double area = w->rows * w->cols / ((double)parts +4.);
 	//double area = w->rows * w->cols / (double)parts;
 	for (i = 0; i < parts;)
 	{
@@ -2131,6 +2131,7 @@ void ccv_dpm_mixture_model_new(char** posfiles, ccv_rect_t* bboxes, int posnum, 
 				ASSERT(v->id >= 0 && v->id < model->count);
 				++negvnum[v->id];
 			}
+                        PRINT(CCV_CLI_INFO, "number found negatives: %d", negv->rnum);
 			if (negv->rnum <= ccv_max(params.negative_cache_size / 2, ccv_max(REGQ, MINI_BATCH)))
 			{
 				for (i = 0; i < model->count; i++)
@@ -2284,11 +2285,11 @@ void ccv_dpm_mixture_model_new(char** posfiles, ccv_rect_t* bboxes, int posnum, 
 		ccv_array_free(negv);
 	}
         //save learned filter as hdf5 files
-        ccv_write_modified(model->root->root.w, "../samples/fly/root_filter_learned.h5", "data", CCV_NUMBER_CHANNELS);
+        ccv_write_modified(model->root->root.w, "../samples/larvae/filter/root_filter_learned.h5", "data", CCV_NUMBER_CHANNELS);
         char* file_name[3];
-        file_name[0] = "../samples/fly/part_filter_1_learned.h5";
-        file_name[1] = "../samples/fly/part_filter_2_learned.h5";
-        file_name[2] = "../samples/fly/part_filter_3_learned.h5";
+        file_name[0] = "../samples/larvae/filter/part_filter_1_learned.h5";
+        file_name[1] = "../samples/larvae/filter/part_filter_2_learned.h5";
+        file_name[2] = "../samples/larvae/filter/part_filter_3_learned.h5";
         for(int i=0; i<model->root->count; i++)
         {
                 ccv_write_modified((model->root->part+i)->w, file_name[i], "data", CCV_NUMBER_CHANNELS);
@@ -2351,15 +2352,17 @@ static int _ccv_is_equal_same_class(const void* _r1, const void* _r2, void* data
 		(int)(r2->rect.height * 1.5 + 0.5) >= r1->rect.height;
 }
 
-void test_detect(ccv_dense_matrix_t* a, ccv_dpm_mixture_model_t** _model, int count, ccv_dpm_param_t params)
+void test_detect(ccv_dense_matrix_t* a, ccv_dpm_mixture_model_t** _model, int count, ccv_dpm_param_t params, char* filename)
 {
         //load model and compute pyramid
 	ccv_dpm_mixture_model_t* model = _model[0];
+        
         double dxx = model->root->part[0].dxx;
         double dyy = model->root->part[0].dyy;
         double dxx_2 = model->root->part[1].dxx;
         double dyy_2 = model->root->part[1].dyy;
         PRINT(CCV_CLI_INFO,"spring constant part 1: dx=%f, dy=%f, part 2: dx=%f, dy=%f", dxx, dyy, dxx_2, dyy_2);
+        
 	ccv_dense_matrix_t** pyr = (ccv_dense_matrix_t**)alloca(2 * sizeof(ccv_dense_matrix_t*));
 	_ccv_dpm_feature_pyramid_modified(a, pyr, 0, 0);
 
@@ -2369,16 +2372,30 @@ void test_detect(ccv_dense_matrix_t* a, ccv_dpm_mixture_model_t** _model, int co
         ccv_dense_matrix_t* dx[CCV_DPM_PART_MAX];
         ccv_dense_matrix_t* dy[CCV_DPM_PART_MAX];
 	_ccv_dpm_compute_score(root, pyr[1], pyr[0], &root_feature, part_feature, dx, dy);
+        
+        //create filename of output
+        char* beginning = "../scoremap/scoremap";
+        size_t len = 1024;
+        char* new_filename = (char*)malloc(len);
+        strcpy(new_filename, beginning);
+        char* _pos = strchr(filename, '_');
+        strcat(new_filename, _pos);
+        
+        ccv_write_modified(root_feature, new_filename, "data", 1);
+        
+        /*
         ccv_write_modified(root_feature, "../samples/fly/filters/output_scoremap.h5", "data", 1);
         const* filenames[root->count];
         filenames[0] =  "../samples/fly/filters/output_part_1_scoremap.h5";
         filenames[1] =  "../samples/fly/filters/output_part_2_scoremap.h5";
-        //filenames[2] =  "../samples/fly/filters/output_part_3_scoremap.h5";
+        filenames[2] =  "../samples/fly/filters/output_part_3_scoremap.h5";
         for (int k = 0; k < root->count; k++)
         {
                 ccv_write_modified(part_feature[k], filenames[k], "data", 1);        
-        }
+        } */
+
         //free memory
+        free(new_filename);
         for (int k = 0; k < root->count; k++)
         {
                 ccv_matrix_free(part_feature[k]);
